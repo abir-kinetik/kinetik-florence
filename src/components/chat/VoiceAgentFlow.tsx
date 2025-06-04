@@ -78,7 +78,7 @@ const VoiceAgentFlow = () => {
     // You can experiment with these values.
     // Default rate is 1, default pitch is 1.
     // A slightly lower rate and slightly varied pitch can make it sound more natural.
-    utterance.rate = 0.95; // Slightly slower than default
+    utterance.rate = 1.07; // Slightly slower than default
     utterance.pitch = 1.05; // Slightly higher than default
 
     // Optional: Select a specific voice for more control
