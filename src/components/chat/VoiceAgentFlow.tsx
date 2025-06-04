@@ -565,16 +565,9 @@ const VoiceAgentFlow = () => {
     }
 
     // start by intializing the agent with init message
-    setAgentStatus(AgentStatus.IDLE);
-    setChatHistory(prev => [...prev, {
-      id: Date.now().toString(),
-      sender: 'agent',
-      text: INITIAL_AGENT_MESSAGE,
-      timestamp: new Date()
-    }]);
     // console.log("handleStartConversation: Simulating initial user message.");
     // This will trigger the first turn with Gemini
-    // handleUserMessage(INITIAL_USER_TRIGGER_MESSAGE);
+    handleUserMessage(INITIAL_USER_TRIGGER_MESSAGE);
   };
 
   // --- UI Helper Functions ---
