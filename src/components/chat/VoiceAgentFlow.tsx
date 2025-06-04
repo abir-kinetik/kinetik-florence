@@ -2,7 +2,7 @@ import {SpeechRecognition, SpeechRecognitionErrorEvent, SpeechRecognitionEvent} 
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {Chat, GoogleGenAI} from '@google/genai';
 import {AgentStatus, BookingInfo, ChatMessage, PatientInfo} from '../../types/types.ts';
-import {GEMINI_MODEL_NAME, GEMINI_SYSTEM_PROMPT, INITIAL_AGENT_MESSAGE} from '../../constants';
+import {GEMINI_MODEL_NAME, GEMINI_SYSTEM_PROMPT, INITIAL_AGENT_MESSAGE, INITIAL_USER_TRIGGER_MESSAGE} from '../../constants';
 import ChatBubble from './ChatBubble.tsx';
 import BookingDetailsCard from '../booking/BookingDetailsCard.tsx';
 import {MicrophoneIcon, PlayIcon, RefreshCwIcon, StopIcon} from '../icons.tsx';
@@ -160,7 +160,11 @@ const VoiceAgentFlow = () => {
 
     setAgentStatus(AgentStatus.PROCESSING);
     const newUserMessage: ChatMessage = {id: Date.now().toString(), sender: 'user', text, timestamp: new Date()};
+
+    if (text != INITIAL_USER_TRIGGER_MESSAGE) {
     setChatHistory(prev => [...prev, newUserMessage]);
+    }
+
     setCurrentUserTranscript('');
 
     try {
@@ -192,12 +196,9 @@ const VoiceAgentFlow = () => {
         const chunkText = chunk.text;
         if (chunkText) {
           fullAgentResponse += chunkText;
-          setChatHistory(prev => prev.map(msg => msg.id === agentMessageId ? {
-            ...msg,
-            text: fullAgentResponse
-          } : msg));
         }
       }
+
       setCurrentAgentMessage(fullAgentResponse);
       console.log("handleUserMessage: Gemini full response:", fullAgentResponse);
 
@@ -205,6 +206,14 @@ const VoiceAgentFlow = () => {
       console.log("handleUserMessage: Extracted JSON block:", {jsonBlock});
 
       if (jsonBlock) {
+        setChatHistory(prev => prev.map(msg => msg.id === agentMessageId ? {
+            ...msg,
+            text: "Thank you. Please wait, while we process your request."
+          } : msg));
+
+         setCurrentAgentMessage("Thank you. Please wait, while we process your request.");
+         speak("Thank you. Please wait, while we process your request.")
+
         let parsedJsonContent;
         try {
           parsedJsonContent = JSON.parse(jsonBlock);
@@ -286,6 +295,11 @@ const VoiceAgentFlow = () => {
 
       // If no JSON processed or if JSON was not for patient/booking, speak the regular response.
       console.log("handleUserMessage: No specific JSON action, speaking full response:", fullAgentResponse);
+
+      setChatHistory(prev => prev.map(msg => msg.id === agentMessageId ? {
+            ...msg,
+            text: fullAgentResponse
+          } : msg));
       speak(fullAgentResponse);
 
     } catch (e) {
@@ -502,7 +516,7 @@ const VoiceAgentFlow = () => {
 
     console.log("handleStartConversation: Simulating initial user message.");
     // This will trigger the first turn with Gemini
-    handleUserMessage("Hello, I'd like to book a ride");
+    handleUserMessage(INITIAL_USER_TRIGGER_MESSAGE);
   };
 
   // --- UI Helper Functions ---
