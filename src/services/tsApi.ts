@@ -2,7 +2,7 @@ import Qs from 'qs';
 import Axios, { AxiosInstance } from 'axios';
 import { BookingInfo, PatientInfo, TripManagementInfo, Trip } from "@/src/types/types.ts";
 import { DateTime, Settings } from 'luxon';
-import { log } from 'console';
+import { sendActualEmail } from './email';
 
 Settings.defaultZone = 'America/Los_Angeles';
 
@@ -21,7 +21,7 @@ export const getPatientInfo = async (patientInfo: PatientInfo) => {
     params: {
       memberId: patientInfo.memberId,
       orgResourceId,
-      fields: 'uuid name'
+      fields: 'uuid name contactInfo'
     }
   }).then(res => res);
   console.log(patients);
@@ -35,6 +35,7 @@ export const getPatientInfo = async (patientInfo: PatientInfo) => {
       ...patientInfo,
       name: fullName,
       uuid: patient.uuid,
+      email: patient.contactInfo?.email,
     };
   } else {
     throw new Error('Patient not found');
@@ -95,13 +96,55 @@ export async function createTrip(bookingInfo: BookingInfo) {
         `/${orgResourceId}/trips/itinerary/${tripType}/via-external-request-origin/${externalOrigin}`,
         requestBody
       );
-    console.log(response)
-
-    setInterval(async () => {
-      const job = await apiAdapter.get(`/${orgResourceId}/trip-jobs/?uuid=${response.jobUuid}`);
-      console.log(job.data);
-    }, 7500);
+    return response.jobUuid;
   }
+}
+
+export async function pullJob(patientInfo: PatientInfo, jobUuid: string) {
+  setTimeout(async () => {
+    const { data: { jobs } } = await apiAdapter.get(`/${orgResourceId}/trip-jobs?uuid=${jobUuid}`);
+    if (!jobs || jobs.length === 0) {
+      throw new Error('Job not found');
+    }
+    const job = jobs[0];
+    if (job.status === 'SUCCESS') {
+      const trip = job.result.itinerary[0];
+      const info = {
+        patientName: patientInfo.name,
+        confirmationNumber: trip.confirmationNumber,
+        status: trip.status,
+        statusText: trip.statusText,
+        pickupAddress: trip.request.pickup.addressText,
+        dropOffAddress: trip.request.dropOff.addressText,
+        pickupDateTime: trip.request.pickupDateTime,
+        dropOffDateTime: trip.request.dropOffDateTime,
+        appointmentReason: trip.request.appointmentReasons[0].displayText,
+        levelOfService: trip.request.serviceInfo.levelOfService.displayText,
+      };
+      const text = `
+        Trip Confirmation Details:
+        Confirmation Number: ${info.confirmationNumber}
+        Status: ${info.status},
+        Status Text: ${info.statusText},
+        Patient Name: ${info.patientName}
+        Pickup Address: ${info.pickupAddress}
+        Drop-off Address: ${info.dropOffAddress}
+        Pickup Date and Time: ${info.pickupDateTime}
+        DropOff Date and Time: ${info.dropOffDateTime}
+        Appointment Reasons: ${info.appointmentReason}
+        Level of Service: ${info.levelOfService}
+        `;
+      await sendActualEmail(
+        'abir@kinetik.care',
+        text,
+        patientInfo.name || 'Valued Customer',
+        'Trip Confirmation'
+      );
+    } else if (job.status === 'ERROR') {
+      await sendActualEmail('abir@kinetik.care', 'Trip Creation Error', patientInfo.name || 'Valued Customer', "Error");
+      // throw new Error('ERROR');
+    }
+  }, 30000);
 }
 
 export async function getTripData(query: TripManagementInfo) {

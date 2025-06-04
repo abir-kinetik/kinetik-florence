@@ -11,6 +11,7 @@ export interface PatientInfo {
   dob: Date;
   organization: string;
   name?: string;
+  email?: string;
   uuid?: string;
 }
 
