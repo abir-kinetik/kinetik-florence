@@ -2,6 +2,7 @@ import Qs from 'qs';
 import Axios, { AxiosInstance } from 'axios';
 import { BookingInfo, PatientInfo, TripManagementInfo, Trip } from "@/src/types/types.ts";
 import { DateTime, Settings } from 'luxon';
+import { log } from 'console';
 
 Settings.defaultZone = 'America/Los_Angeles';
 
@@ -89,12 +90,17 @@ export async function createTrip(bookingInfo: BookingInfo) {
   const externalOrigin = 'KINETIK_MA';
 
   if (levelOfService && appointmentReason) {
-    const response =
+    const { data: response } =
       await apiAdapter.post(
         `/${orgResourceId}/trips/itinerary/${tripType}/via-external-request-origin/${externalOrigin}`,
         requestBody
       );
     console.log(response)
+
+    setInterval(async () => {
+      const job = await apiAdapter.get(`/${orgResourceId}/trip-jobs/${response.jobUuid}`);
+      console.log(job.data);
+    }, 7500);
   }
 }
 
@@ -119,12 +125,13 @@ export async function getTripData(query: TripManagementInfo) {
       request: {
         pickup: trip.request.pickup,
         dropOff: trip.request.dropOff,
-        pickupDateTime: DateTime.fromISO(trip.request.pickupDateTime, { zone: 'America/Los_Angeles' }),
+        pickupDateTime: DateTime.fromISO(trip.request.pickupDateTime, { zone: 'America/Los_Angeles' }).toJSDate(),
+        dropOffDateTime: DateTime.fromISO(trip.request.dropOffDateTime, { zone: 'America/Los_Angeles' }).toJSDate(),
         appointmentReasons: trip.request.appointmentReasons[0],
         levelOfService: trip.request.serviceInfo.levelOfService,
         noteToDriver: trip.request.instructions
       }
-    };
+    } as Trip;
   }
   return null;
 }

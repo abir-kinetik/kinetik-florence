@@ -27,6 +27,24 @@ const VoiceAgentFlow = () => {
   const chatHistoryRef = useRef<HTMLDivElement>(null);
   const currentUserTranscriptRef = useRef(currentUserTranscript);
 
+  const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
+
+  useEffect(() => {
+    const loadVoices = () => {
+      const voices = window.speechSynthesis.getVoices();
+      setAvailableVoices(voices);
+    };
+
+    // Initial load
+    loadVoices();
+
+    // Subscribe to voices changing
+    window.speechSynthesis.addEventListener('voiceschanged', loadVoices);
+    return () => {
+      window.speechSynthesis.removeEventListener('voiceschanged', loadVoices);
+    };
+  }, []);
+
   useEffect(() => {
     currentUserTranscriptRef.current = currentUserTranscript;
   }, [currentUserTranscript]);
@@ -71,7 +89,8 @@ const VoiceAgentFlow = () => {
     setAgentStatus(AgentStatus.SPEAKING);
     lastSpokenAgentMessageRef.current = text;
 
-    const utterance = new SpeechSynthesisUtterance(text);
+    const cleanedText = text.replace(/\n/g, " ");
+    const utterance = new SpeechSynthesisUtterance(cleanedText);
     utterance.lang = 'en-US';
 
     // --- Voice Enhancement: Dynamic Pitch and Rate ---
@@ -83,12 +102,12 @@ const VoiceAgentFlow = () => {
 
     // Optional: Select a specific voice for more control
     // This requires asynchronously fetching available voices
-    const voices = window.speechSynthesis.getVoices();
-    const desiredVoice = voices.find(
+    // const voices = window.speechSynthesis.getVoices();
+    const desiredVoice = availableVoices.find(
       (voice) => voice.lang === 'en-US' && voice.name.includes('Google') // Prioritize Google voices, often sound better
-    ) || voices.find(
+    ) || availableVoices.find(
       (voice) => voice.lang === 'en-US' && !voice.name.includes('Samantha') // Avoid common "robotic" voices like 'Samantha' if present
-    ) || voices.find(
+    ) || availableVoices.find(
       (voice) => voice.lang === 'en-US'
     ); // Fallback to any en-US voice
 
@@ -100,6 +119,14 @@ const VoiceAgentFlow = () => {
     }
     // --- End Voice Enhancement ---
 
+    utterance.onstart = () => {
+      console.log("Speak: Utterance actually started. Speaking:", window.speechSynthesis.speaking);
+    };
+    // Add this inside your speak function before window.speechSynthesis.speak(utterance)
+    if (window.speechSynthesis.speaking) {
+      console.warn("Speak: Warning! Another utterance is already speaking. Cancelling previous.");
+      window.speechSynthesis.cancel(); // Cancel any ongoing speech before starting a new one.
+    }
     utterance.onend = () => {
       console.log("Speak: Utterance ended. Current agent status (before setting IDLE):", agentStatusRef.current);
       setCurrentAgentMessage('');
@@ -115,7 +142,7 @@ const VoiceAgentFlow = () => {
       }
     };
     window.speechSynthesis.speak(utterance);
-  }, []);
+  }, [availableVoices]);
 
 
   const updatePatientContext = useCallback(async (patient: PatientInfo, tripInfo: any = null) => {
@@ -276,7 +303,7 @@ const VoiceAgentFlow = () => {
       default:
         break;
     }
-  }, [speak, setChatHistory, setPatientInfo, setBookingInfo, setConversationState, setAgentStatus]);
+  }, [patientInfo, bookingInfo, speak, setChatHistory, setPatientInfo, setBookingInfo, setConversationState, setAgentStatus]);
 
   const handleUserMessage = useCallback(async (text: string) => {
     console.log(`handleUserMessage called with text: "${text}", patientInfo:`, patientInfo, "conversationState:", conversationState);
@@ -564,26 +591,23 @@ const VoiceAgentFlow = () => {
   // It will also reset the agent status to IDLE and clear any errors.
   // this will be called after user ends the conversation
   const handleEndConversation = () => {
-    speak("Thank you for using our service. Have a great day!");
-    setTimeout(() => {
-      console.log("handleEndConversation called.");
-      setChatHistory([]);
-      setPatientInfo(null);
-      setBookingInfo(null);
-      setConversationState('initial');
-      setError(null);
-      setCurrentUserTranscript('');
-      setCurrentAgentMessage('');
-      lastSpokenAgentMessageRef.current = '';
-      window.speechSynthesis.cancel();
-      if (geminiChatRef.current && typeof (geminiChatRef.current as any).destroy === 'function') {
-        // (geminiChatRef.current as any).destroy(); // If a cleanup method exists
-        console.log("handleEndConversation: Gemini chat destroyed.");
-      }
-      geminiChatRef.current = null; // Reset the chat reference
-      setAgentStatus(AgentStatus.ENDED);
-      console.log("handleEndConversation: Conversation ended and state reset.");
-    }, 5000);
+    console.log("handleEndConversation called.");
+    setChatHistory([]);
+    setPatientInfo(null);
+    setBookingInfo(null);
+    setConversationState('initial');
+    setError(null);
+    setCurrentUserTranscript('');
+    setCurrentAgentMessage('');
+    lastSpokenAgentMessageRef.current = '';
+    window.speechSynthesis.cancel();
+    if (geminiChatRef.current && typeof (geminiChatRef.current as any).destroy === 'function') {
+      // (geminiChatRef.current as any).destroy(); // If a cleanup method exists
+      console.log("handleEndConversation: Gemini chat destroyed.");
+    }
+    geminiChatRef.current = null; // Reset the chat reference
+    setAgentStatus(AgentStatus.ENDED);
+    console.log("handleEndConversation: Conversation ended and state reset.");
   };
 
   const handleStartConversation = () => {
@@ -733,7 +757,10 @@ const VoiceAgentFlow = () => {
               )}
               {chatHistory.length > 0 && agentStatus !== AgentStatus.ENDED && agentStatus !== AgentStatus.NO_API_KEY && (
                 <button
-                  onClick={handleStartConversation}
+                  onClick={() => {
+                    // handleEndConversation();
+                    handleStartConversation();
+                  }}
                   title="Reset Conversation"
                   aria-label="Reset conversation"
                   className="p-3 bg-slate-600 hover:bg-slate-500 text-white font-semibold rounded-full shadow-md transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-opacity-75 disabled:opacity-50"

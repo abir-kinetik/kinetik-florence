@@ -73,11 +73,11 @@ export interface PatientInfo {
 export interface Itinerary {
   pickup: {
     addressText: string;
-    longLat: [number, number];
+    longLat: [number, number]; - Important add this field, default is [0, 0] if nothing comes up
   },
   dropOff: {
     addressText: string;
-    longLat: [number, number];
+    longLat: [number, number]; - Important add this field, default is [0, 0] if nothing comes up
   }
   pickupDateTime: Date;
   appointmentReasons: string;
