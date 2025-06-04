@@ -144,7 +144,7 @@ export async function pullJob(patientInfo: PatientInfo, jobUuid: string) {
       await sendActualEmail('abir@kinetik.care', 'Trip Creation Error', patientInfo.name || 'Valued Customer', "Error");
       // throw new Error('ERROR');
     }
-  }, 20000);
+  }, 30000);
 }
 
 export async function getTripData(query: TripManagementInfo) {
