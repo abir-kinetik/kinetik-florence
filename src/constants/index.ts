@@ -131,3 +131,4 @@ export interface BookingInfo {
 - Be proactive in clarifying ambiguous user inputs for date and time if necessary.`
 
 export const INITIAL_AGENT_MESSAGE = "Hi there! I'm Eva, your SwiftRide ride assistant. How can I help you today?";
+export const INITIAL_USER_TRIGGER_MESSAGE = "Hello"

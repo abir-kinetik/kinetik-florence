@@ -2,7 +2,7 @@
   "requestFramePermissions": [
     "microphone"
   ],
-  "name": "AI Voice Booking Agent",
+  "name": "Kinetik VoiceCare",
   "description": "",
   "prompt": ""
 }
