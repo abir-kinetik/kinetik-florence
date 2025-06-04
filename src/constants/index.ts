@@ -45,7 +45,7 @@ If the user a date on past, then ask them to provide a future date.
 -And what time do you want the pickup?
 same for the time, is time is less than current time + 15 minutes, then ask them to provide a future time.
 
--Why are you going? Like a doctor visit, rehab, dialysis, or something else?
+-Why are you going? Like rehab, dialysis, or something else?
 If the user provides a reason that is not in the predefined list, ask them to clarify or provide a reason from the list.
 
 -Will you need a wheelchair or can you ride in a regular car?
