@@ -60,27 +60,46 @@ const VoiceAgentFlow = () => {
 
   const speak = useCallback((text: string) => {
     console.log("Speak called with text:", text);
-    if (!text || !text.trim()) { // Allow speaking same message if lastSpokenAgentMessageRef check is removed
+    if (!text || !text.trim()) {
       console.log("Speak: Text is empty, returning. Current agent status:", agentStatusRef.current);
       if (agentStatusRef.current !== AgentStatus.ENDED && agentStatusRef.current !== AgentStatus.ERROR && agentStatusRef.current !== AgentStatus.NO_API_KEY) {
         setAgentStatus(AgentStatus.IDLE);
       }
       return;
     }
-    // Optional: Re-add if re-speaking exact same consecutive message is an issue
-    // if (lastSpokenAgentMessageRef.current === text) {
-    //   console.log("Speak: Text is same as last spoken, returning.");
-    //   if (agentStatusRef.current !== AgentStatus.ENDED && agentStatusRef.current !== AgentStatus.ERROR && agentStatusRef.current !== AgentStatus.NO_API_KEY) {
-    //     setAgentStatus(AgentStatus.IDLE);
-    //   }
-    //   return;
-    // }
 
     setAgentStatus(AgentStatus.SPEAKING);
     lastSpokenAgentMessageRef.current = text;
 
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'en-US';
+
+    // --- Voice Enhancement: Dynamic Pitch and Rate ---
+    // You can experiment with these values.
+    // Default rate is 1, default pitch is 1.
+    // A slightly lower rate and slightly varied pitch can make it sound more natural.
+    utterance.rate = 0.95; // Slightly slower than default
+    utterance.pitch = 1.05; // Slightly higher than default
+
+    // Optional: Select a specific voice for more control
+    // This requires asynchronously fetching available voices
+    const voices = window.speechSynthesis.getVoices();
+    const desiredVoice = voices.find(
+      (voice) => voice.lang === 'en-US' && voice.name.includes('Google') // Prioritize Google voices, often sound better
+    ) || voices.find(
+      (voice) => voice.lang === 'en-US' && !voice.name.includes('Samantha') // Avoid common "robotic" voices like 'Samantha' if present
+    ) || voices.find(
+      (voice) => voice.lang === 'en-US'
+    ); // Fallback to any en-US voice
+
+    if (desiredVoice) {
+      utterance.voice = desiredVoice;
+      console.log("Speak: Using voice:", desiredVoice.name);
+    } else {
+      console.warn("Speak: No specific 'en-US' voice found, using default.");
+    }
+    // --- End Voice Enhancement ---
+
     utterance.onend = () => {
       console.log("Speak: Utterance ended. Current agent status (before setting IDLE):", agentStatusRef.current);
       setCurrentAgentMessage('');
