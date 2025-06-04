@@ -1,23 +1,25 @@
 import Qs from 'qs';
-import Axios, {AxiosInstance} from 'axios';
-import {BookingInfo, PatientInfo} from "@/src/types/types.ts";
-import {DateTime, Settings} from 'luxon';
+import Axios, { AxiosInstance } from 'axios';
+import { BookingInfo, PatientInfo, TripManagementInfo, Trip } from "@/src/types/types.ts";
+import { DateTime, Settings } from 'luxon';
 
-Settings.setZone = 'America/Los_Angeles'
+Settings.defaultZone = 'America/Los_Angeles';
+
+const orgResourceId = 'testorg2025q2';
 
 const apiAdapter: AxiosInstance = Axios.create({
   baseURL: process.env.TS_DEV_API_URL,
   headers: {
     Authorization: `Service ${process.env.TS_SERVICE_TOKEN_KEY}:${process.env.TS_SERVICE_TOKEN_SECRET}`,
   },
-  paramsSerializer: params => Qs.stringify(params, {arrayFormat: 'repeat'})
+  paramsSerializer: params => Qs.stringify(params, { arrayFormat: 'repeat' })
 });
 
 export const getPatientInfo = async (patientInfo: PatientInfo) => {
-  const {data: {patients}} = await apiAdapter.get(`/testorg2025q2/patients/search`, {
+  const { data: { patients } } = await apiAdapter.get(`/${orgResourceId}/patients/search`, {
     params: {
       memberId: patientInfo.memberId,
-      orgResourceId: 'testorg2025q2',
+      orgResourceId,
       fields: 'uuid name'
     }
   }).then(res => res);
@@ -39,40 +41,9 @@ export const getPatientInfo = async (patientInfo: PatientInfo) => {
 
 }
 
-// const body = {
-//     "patientUuid": "p",
-//     "itinerary": [
-//         {
-//             "pickupDateTime": "pd",
-//             "pickup": {
-//                 "longLat": [1, 2],
-//                 "addressText": "address"
-//             },
-//             "dropOff": {
-//                 "longLat": [1, 2],
-//                 "addressText": "address"
-//             },
-//             "appointmentReasons": [
-//                 {
-//                     "uuid": "reasonUuid",
-//                     "displayText": "text",
-//                     "classifications": []
-//                 }
-//             ],
-//             "serviceInfo": {
-//                 "levelOfService": {
-//                     "uuid": "losUuid",
-//                     "displayText": "text"
-//                 }
-//             },
-//             "bookingType": "SCHEDULED"
-//         }
-//     ]
-// }
-
 export async function createTrip(bookingInfo: BookingInfo) {
-  const {data: {appointmentReasons}} = await apiAdapter.get(`/testorg2025q2/config/appointment-reasons`);
-  const {data: {levelsOfService}} = await apiAdapter.get(`/testorg2025q2/config/level-of-service`);
+  const { data: { appointmentReasons } } = await apiAdapter.get(`/${orgResourceId}/config/appointment-reasons`);
+  const { data: { levelsOfService } } = await apiAdapter.get(`/${orgResourceId}/config/level-of-service`);
 
   const appointmentReason = appointmentReasons.find((reason: {
     displayText: string;
@@ -81,13 +52,13 @@ export async function createTrip(bookingInfo: BookingInfo) {
     displayText: string;
   }) => reason.displayText.toLowerCase() === bookingInfo.itinerary.levelOfService.toLowerCase());
 
-  console.log({appointmentReason, levelOfService})
+  console.log({ appointmentReason, levelOfService })
 
   const requestBody = {
     "patientUuid": bookingInfo.patientInfo.uuid,
     "itinerary": [
       {
-        "pickupDateTime": DateTime.fromISO(bookingInfo.itinerary.pickupDateTime, {zone: 'America/Los_Angeles'}).toUTC().toISO(),
+        "pickupDateTime": DateTime.fromISO(bookingInfo.itinerary.pickupDateTime, { zone: 'America/Los_Angeles' }).toUTC().toISO(),
         "pickup": bookingInfo.itinerary.pickup,
         "dropOff": bookingInfo.itinerary.dropOff,
         "appointmentReasons": [
@@ -110,11 +81,10 @@ export async function createTrip(bookingInfo: BookingInfo) {
     approvalRequest: {
       action: 'REQUEST_APPROVAL',
       body: {
-        openingReason: {displayText: 'IVR booking test'}
+        openingReason: { displayText: 'IVR booking test' }
       }
     }
   };
-  const orgResourceId = 'testorg2025q2';
   const tripType = 'SCHEDULED';
   const externalOrigin = 'KINETIK_MA';
 
@@ -128,16 +98,33 @@ export async function createTrip(bookingInfo: BookingInfo) {
   }
 }
 
-export function getTripsUuid() {
-  (async () => {
-    const result = await apiAdapter.get(`/hpsj/trips`, {
-      params: {
-        fields: 'uuid itineraryUuid',
-        page: 1,
-        limit: 5,
+export async function getTripData(query: TripManagementInfo) {
+  const { data: { trips } } = await apiAdapter.get(`/${orgResourceId}/trips/search`, {
+    params: {
+      ...(query?.confirmationNumber && { confirmationNumber: query.confirmationNumber }),
+      ...(query?.pickupDateTime && {
+        pickupDateTime: DateTime.fromJSDate(query?.pickupDateTime, { zone: 'America/Los_Angeles' }).toUTC().toISO()
+      }),
+      'requester.orgResourceId': orgResourceId,
+      page: 1,
+      limit: 5,
+    }
+  });
+  if (trips && trips.length > 0) {
+    const trip = trips[0];
+    return {
+      uuid: trip.uuid,
+      itineraryUuid: trip.itineraryUuid,
+      confirmationNumber: trip.confirmationNumber,
+      request: {
+        pickup: trip.request.pickup,
+        dropOff: trip.request.dropOff,
+        pickupDateTime: DateTime.fromISO(trip.request.pickupDateTime, { zone: 'America/Los_Angeles' }),
+        appointmentReasons: trip.request.appointmentReasons[0],
+        levelOfService: trip.request.serviceInfo.levelOfService,
+        noteToDriver: trip.request.instructions
       }
-    });
-
-    console.log(result.data);
-  })();
+    };
+  }
+  return null;
 }

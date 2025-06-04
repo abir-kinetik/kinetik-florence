@@ -36,6 +36,40 @@ export interface BookingInfo {
   itinerary: Itinerary;
 }
 
+export interface TripManagementInfo {
+  confirmationNumber?: string;
+  pickupDateTime?: Date;
+}
+export interface GrievanceInfo {
+  patientInfo: PatientInfo;
+  issueDescription: string;
+}
+
+export interface Trip {
+  uuid: string;
+  itineraryUuid: string;
+  confirmationNumber: string;
+  request: {
+    pickup: {
+      addressText: string;
+      longLat: [number, number];
+    },
+    dropOff: {
+      addressText: string;
+      longLat: [number, number];
+    },
+    pickupDateTime: Date;
+    dropOffDateTime?: Date;
+    appointmentReasons: {
+      displayText: string;
+    };
+    levelOfService: {
+      displayText: string;
+    };
+    noteToDriver?: string;
+  }
+}
+
 export enum AgentStatus {
   IDLE = 'IDLE',
   LISTENING = 'LISTENING',
