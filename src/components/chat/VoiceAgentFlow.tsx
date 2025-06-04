@@ -159,7 +159,7 @@ const VoiceAgentFlow = () => {
     agentMessageId: string,
     fullAgentResponse: string
   ) => {
-    const { jsonType, ...jsonData } = jsonContent;
+    const { type: jsonType, ...jsonData } = jsonContent;
     switch (jsonType) {
       case 'MEMBER_INFO':
         // Ensure the JSON has all necessary fields for verification as per your getPatientInfo needs
@@ -191,7 +191,7 @@ const VoiceAgentFlow = () => {
         } else {
           console.log("handleUserMessage: JSON block found, but not valid for patient verification, or patient already verified.");
         }
-        break;
+        return;
       case 'BOOKING_INFO':
         try {
           const bookingData = jsonContent as Partial<BookingInfo>; // May not be full BookingInfo yet
@@ -202,7 +202,12 @@ const VoiceAgentFlow = () => {
           } as BookingInfo; // Assert type after combining
 
           // Check for essential booking details
-          if (bookingInfoJson.itinerary && bookingInfoJson.itinerary.pickupDateTime && bookingInfoJson.patientInfo.memberId) {
+          if (
+            bookingInfoJson.itinerary &&
+            bookingInfoJson.itinerary.pickupDateTime &&
+            bookingInfoJson.itinerary.pickup &&
+            bookingInfoJson.itinerary.dropOff
+          ) {
             console.log('handleUserMessage: Booking info captured:', bookingInfoJson);
             setBookingInfo(bookingInfoJson);
             setConversationState('confirming');
@@ -211,14 +216,11 @@ const VoiceAgentFlow = () => {
             } catch (createTripError) {
               throw new Error(`Failed to create trip: ${createTripError}`);
             }
-            // setAgentStatus(AgentStatus.ENDED);
-            // The fullAgentResponse here should be Gemini's confirmation of the booking details.
-            // lastSpokenAgentMessageRef.current = fullAgentResponse; // speak() handles this
-            // speak(fullAgentResponse); // Speak the confirmation
             return; // Booking processed
           } else {
             console.log("handleUserMessage: JSON block found with patient verified, but not valid for booking confirmation.");
           }
+          break;
         } catch (error) {
           console.error("handleUserMessage: Error processing JSON block:", error);
           const errorResponse = "I'm having a little trouble processing your booking. Please try again in a moment.";
@@ -325,6 +327,17 @@ const VoiceAgentFlow = () => {
 
         if (parsedJsonContent) {
           handleJSONAction(parsedJsonContent, agentMessageId, fullAgentResponse);
+          if ([
+            'MEMBER_INFO',
+            'BOOKING_INFO',
+            'TRIP_MANAGEMENT',
+            'TRIP_CANCELLATION',
+            'GRIEVANCE_INFO',
+            'END_CONVERSATION'
+          ].includes(parsedJsonContent.type)) {
+            // Handle member info specifically if needed
+            return;
+          }
         }
       }
 
@@ -551,9 +564,17 @@ const VoiceAgentFlow = () => {
       return;
     }
 
-    console.log("handleStartConversation: Simulating initial user message.");
+    // start by intializing the agent with init message
+    setAgentStatus(AgentStatus.IDLE);
+    setChatHistory(prev => [...prev, {
+      id: Date.now().toString(),
+      sender: 'agent',
+      text: INITIAL_AGENT_MESSAGE,
+      timestamp: new Date()
+    }]);
+    // console.log("handleStartConversation: Simulating initial user message.");
     // This will trigger the first turn with Gemini
-    handleUserMessage(INITIAL_USER_TRIGGER_MESSAGE);
+    // handleUserMessage(INITIAL_USER_TRIGGER_MESSAGE);
   };
 
   // --- UI Helper Functions ---
