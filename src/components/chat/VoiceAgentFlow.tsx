@@ -6,7 +6,7 @@ import { GEMINI_MODEL_NAME, GEMINI_SYSTEM_PROMPT, INITIAL_AGENT_MESSAGE, INITIAL
 import ChatBubble from './ChatBubble.tsx';
 import BookingDetailsCard from '../booking/BookingDetailsCard.tsx';
 import { MicrophoneIcon, PlayIcon, RefreshCwIcon, StopIcon } from '../icons.tsx';
-import { createTrip, getPatientInfo, getTripData } from '@/src/services/tsApi.ts';
+import { createTrip, getPatientInfo, getTripData, pullJob } from '@/src/services/tsApi.ts';
 import { separateTextAndJson } from "@/src/utils";
 import emailjs from '@emailjs/browser';
 
@@ -27,7 +27,7 @@ const VoiceAgentFlow = () => {
   const lastSpokenAgentMessageRef = useRef<string>('');
   const chatHistoryRef = useRef<HTMLDivElement>(null);
   const currentUserTranscriptRef = useRef(currentUserTranscript);
-
+  const [jobUuid, setJobUuid] = useState<string | null>(null);
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
 
   useEffect(() => {
@@ -45,6 +45,13 @@ const VoiceAgentFlow = () => {
       window.speechSynthesis.removeEventListener('voiceschanged', loadVoices);
     };
   }, []);
+
+  useEffect(() => {
+    if (jobUuid && patientInfo) {
+      pullJob(patientInfo, jobUuid);
+      setJobUuid(null);
+    }
+  }, [jobUuid]);
 
   useEffect(() => {
     currentUserTranscriptRef.current = currentUserTranscript;
@@ -299,9 +306,16 @@ const VoiceAgentFlow = () => {
             setBookingInfo(bookingInfoJson);
             setConversationState('confirming');
             try {
-              createTrip(bookingInfoJson);
+              const jobUuid = await createTrip(bookingInfoJson);
+              setJobUuid(jobUuid);
             } catch (createTripError) {
               throw new Error(`Failed to create trip: ${createTripError}`);
+            }
+            const confirmationMessage = `Great! We will send an email regarding your trip shortly.`;
+            setChatHistory(prev => prev.map(msg => msg.id === agentMessageId ? { ...msg, text: confirmationMessage } : msg));
+            speak(confirmationMessage);
+            if (patientInfo) {
+              updatePatientContext(patientInfo);
             }
             return; // Booking processed
           } else {
