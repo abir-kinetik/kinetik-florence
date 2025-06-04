@@ -98,7 +98,7 @@ export async function createTrip(bookingInfo: BookingInfo) {
     console.log(response)
 
     setInterval(async () => {
-      const job = await apiAdapter.get(`/${orgResourceId}/trip-jobs/${response.jobUuid}`);
+      const job = await apiAdapter.get(`/${orgResourceId}/trip-jobs/?uuid=${response.jobUuid}`);
       console.log(job.data);
     }, 7500);
   }
