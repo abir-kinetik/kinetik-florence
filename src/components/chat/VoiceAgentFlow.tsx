@@ -118,7 +118,7 @@ const VoiceAgentFlow = () => {
   }, []);
 
 
-  const updatePatientContext = useCallback(async (patient: PatientInfo) => {
+  const updatePatientContext = useCallback(async (patient: PatientInfo, tripInfo: any = null) => {
     if (!geminiChatRef.current) {
       console.error("updatePatientContext: Gemini chat ref not available.");
       return;
@@ -136,11 +136,16 @@ const VoiceAgentFlow = () => {
     let fullAgentResponse = '';
     try {
       setConversationState('verified');
-      const contextMessage = `
+      let contextMessage = `
       CONTEXT UPDATE: Patient ${patientIdentifier} (Member ID: ${patient.memberId}) has been successfully verified.
       IMPORTANT: You are continuing an existing conversation. 
       Do NOT start over or ask for verification again. 
       CURRENT STATUS: Patient is verified and ready to proceeding next phase.`;
+      if (tripInfo) {
+        contextMessage += `
+        Here are the trip details for current conversation:
+        TRIP INFO: ${JSON.stringify(tripInfo)}`;
+      }
 
       const stream = await geminiChatRef.current.sendMessageStream({ message: contextMessage });
 
@@ -253,7 +258,9 @@ const VoiceAgentFlow = () => {
       case 'TRIP_MANAGEMENT':
         const tripData = jsonContent as TripManagementInfo;
         const trip: Trip | null = await getTripData(tripData);
-        console.log(trip);
+        if (trip && patientInfo) {
+          updatePatientContext(patientInfo, trip);
+        }
         break;
       case 'TRIP_CANCELLATION':
         const cancellationReason = jsonContent.displayText || "No reason provided";
@@ -264,8 +271,8 @@ const VoiceAgentFlow = () => {
         console.log("handleUserMessage: Grievance info captured:", grievanceInfo);
         break;
       case 'END_CONVERSATION':
-        setAgentStatus(AgentStatus.ENDED);
-        break;
+        handleEndConversation();
+        return;
       default:
         break;
     }
@@ -328,13 +335,6 @@ const VoiceAgentFlow = () => {
       console.log("handleUserMessage: Extracted JSON block:", { jsonBlock });
 
       if (jsonBlock) {
-        setChatHistory(prev => prev.map(msg => msg.id === agentMessageId ? {
-          ...msg,
-          text: "Thank you. Please wait, while we process your request."
-        } : msg));
-
-        setCurrentAgentMessage("Thank you. Please wait, while we process your request.");
-        speak("Thank you. Please wait, while we process your request.")
 
         let parsedJsonContent;
         try {
@@ -345,6 +345,17 @@ const VoiceAgentFlow = () => {
         }
 
         if (parsedJsonContent) {
+          if (parsedJsonContent.type !== 'END_CONVERSATION') {
+            console.warn("handleUserMessage: JSON block has no type, treating as general response.");
+            setCurrentAgentMessage("Thank you. Please wait, while we process your request.");
+            speak("Thank you. Please wait, while we process your request.")
+          } else {
+            setCurrentAgentMessage("Thank you.");
+            setChatHistory(prev => prev.map(msg => msg.id === agentMessageId ? {
+              ...msg,
+              text: "Thank you."
+            } : msg));
+          }
           handleJSONAction(parsedJsonContent, agentMessageId, fullAgentResponse);
           if ([
             'MEMBER_INFO',
@@ -548,6 +559,33 @@ const VoiceAgentFlow = () => {
 
   }, []); // Removed handleUserMessage, as onend callback (from useEffect) will use the latest handleUserMessage
 
+  // add a function for resetting the conversation
+  // This will reset the chat history, patient info, booking info, and conversation state
+  // It will also reset the agent status to IDLE and clear any errors.
+  // this will be called after user ends the conversation
+  const handleEndConversation = () => {
+    speak("Thank you for using our service. Have a great day!");
+    setTimeout(() => {
+      console.log("handleEndConversation called.");
+      setChatHistory([]);
+      setPatientInfo(null);
+      setBookingInfo(null);
+      setConversationState('initial');
+      setError(null);
+      setCurrentUserTranscript('');
+      setCurrentAgentMessage('');
+      lastSpokenAgentMessageRef.current = '';
+      window.speechSynthesis.cancel();
+      if (geminiChatRef.current && typeof (geminiChatRef.current as any).destroy === 'function') {
+        // (geminiChatRef.current as any).destroy(); // If a cleanup method exists
+        console.log("handleEndConversation: Gemini chat destroyed.");
+      }
+      geminiChatRef.current = null; // Reset the chat reference
+      setAgentStatus(AgentStatus.ENDED);
+      console.log("handleEndConversation: Conversation ended and state reset.");
+    }, 5000);
+  };
+
   const handleStartConversation = () => {
     console.log("handleStartConversation called.");
     setChatHistory([]);
@@ -629,7 +667,7 @@ const VoiceAgentFlow = () => {
       case AgentStatus.SPEAKING:
         return "Eva is speaking...";
       case AgentStatus.ENDED:
-        return "Booking details captured!";
+        return "Conversation ended!";
       case AgentStatus.ERROR:
         return error || "An error occurred. Try again or refresh."; // Display specific error
       case AgentStatus.NO_API_KEY:
