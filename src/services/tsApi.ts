@@ -4,7 +4,7 @@ import { BookingInfo, PatientInfo, TripManagementInfo, Trip } from "@/src/types/
 import { DateTime, Settings } from 'luxon';
 import { sendActualEmail } from './email';
 
-Settings.defaultZone = 'America/Los_Angeles';
+Settings.defaultZone = 'America/New_York';
 
 const orgResourceId = 'testorg2025q2';
 
@@ -69,7 +69,7 @@ export async function createTrip(bookingInfo: BookingInfo) {
     "patientUuid": bookingInfo.patientInfo.uuid,
     "itinerary": [
       {
-        "pickupDateTime": DateTime.fromISO(bookingInfo.itinerary.pickupDateTime, { zone: 'America/Los_Angeles' }).toUTC().toISO(),
+        "pickupDateTime": DateTime.fromISO(bookingInfo.itinerary.pickupDateTime, { zone: 'America/New_York' }).toUTC().toISO(),
         "pickup": bookingInfo.itinerary.pickup,
         "dropOff": bookingInfo.itinerary.dropOff,
         "appointmentReasons": [
@@ -166,7 +166,7 @@ export async function getTripData(query: TripManagementInfo) {
     params: {
       ...(query?.confirmationNumber && { confirmationNumber: query.confirmationNumber }),
       ...(query?.pickupDateTime && {
-        pickupDateTime: DateTime.fromJSDate(query?.pickupDateTime, { zone: 'America/Los_Angeles' }).toUTC().toISO()
+        pickupDateTime: DateTime.fromJSDate(query?.pickupDateTime, { zone: 'America/New_York' }).toUTC().toISO()
       }),
       'requester.orgResourceId': orgResourceId,
       page: 1,
@@ -182,8 +182,8 @@ export async function getTripData(query: TripManagementInfo) {
       request: {
         pickup: trip.request.pickup,
         dropOff: trip.request.dropOff,
-        pickupDateTime: DateTime.fromISO(trip.request.pickupDateTime, { zone: 'America/Los_Angeles' }).toJSDate(),
-        dropOffDateTime: DateTime.fromISO(trip.request.dropOffDateTime, { zone: 'America/Los_Angeles' }).toJSDate(),
+        pickupDateTime: DateTime.fromISO(trip.request.pickupDateTime, { zone: 'America/New_York' }).toJSDate(),
+        dropOffDateTime: DateTime.fromISO(trip.request.dropOffDateTime, { zone: 'America/New_York' }).toJSDate(),
         appointmentReasons: trip.request.appointmentReasons[0],
         levelOfService: trip.request.serviceInfo.levelOfService,
         noteToDriver: trip.request.instructions
