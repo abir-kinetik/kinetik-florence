@@ -144,7 +144,7 @@ const VoiceAgentFlow = () => {
     };
     utterance.onerror = (event) => {
       console.error('Speech synthesis error:', event.error, "Full event:", event);
-      setError(`Speech synthesis error: ${event.error || 'Unknown error'}`);
+      //setError(`Speech synthesis error: ${event.error || 'Unknown error'}`);
       if (agentStatusRef.current !== AgentStatus.ENDED && agentStatusRef.current !== AgentStatus.ERROR && agentStatusRef.current !== AgentStatus.NO_API_KEY) {
         setAgentStatus(AgentStatus.IDLE);
       }
