@@ -65,13 +65,55 @@ export async function createTrip(bookingInfo: BookingInfo) {
 
   console.log({ appointmentReason, levelOfService })
 
+  let pickup = bookingInfo.itinerary.pickup;
+  let dropOff = bookingInfo.itinerary.dropOff;
+
+  if (pickup.longLat[0] === 0 && pickup.longLat[1] === 0) {
+    const { data: { results } } = await apiAdapter.get(`/proxy/google-maps/geocode/json`, {
+      params: {
+        address: pickup.addressText,
+      }
+    });
+    if (results && results.length > 0) {
+      try {
+        const location = results[0].geometry.location;
+        pickup = {
+          ...pickup,
+          longLat: [location.lng, location.lat],
+          addressText: results[0].formatted_address,
+        };
+      } catch (error) {
+        console.log('Pickup Error parsing Google Maps response:', error);
+      }
+    }
+  }
+  if (dropOff.longLat[0] === 0 && dropOff.longLat[1] === 0) {
+    const { data: { results } } = await apiAdapter.get(`/proxy/google-maps/geocode/json`, {
+      params: {
+        address: dropOff.addressText,
+      }
+    });
+    if (results && results.length > 0) {
+      try {
+        const location = results[0].geometry.location;
+        dropOff = {
+          ...dropOff,
+          longLat: [location.lng, location.lat],
+          addressText: results[0].formatted_address,
+        };
+      } catch (error) {
+        console.log('Dropoff Error parsing Google Maps response:', error);
+      }
+    }
+  }
+
   const requestBody = {
     "patientUuid": bookingInfo.patientInfo.uuid,
     "itinerary": [
       {
         "pickupDateTime": DateTime.fromISO(bookingInfo.itinerary.pickupDateTime, { zone: 'America/New_York' }).toUTC().toISO(),
-        "pickup": bookingInfo.itinerary.pickup,
-        "dropOff": bookingInfo.itinerary.dropOff,
+        "pickup": pickup,
+        "dropOff": dropOff,
         "appointmentReasons": [
           {
             "uuid": appointmentReason?.uuid,
