@@ -1,27 +1,4 @@
-// import nodemailer from 'nodemailer';
 import emailjs from '@emailjs/browser';
-
-// Name	Candace Baumbach
-// Username	candace59 @ethereal.email – this account can not be used for inbound emails 
-// Password	DkwtSg64pcUdPKAuc9
-
-// const transporter = nodemailer.createTransport({
-//     service: "gmail",
-//     auth: {
-//         user: process.env.GMAIL_USER_EMAIL,
-//         pass: process.env.GMAIL_APP_PASSWORD,
-//     }
-// });
-
-// export async function sendEmail(to: string, subject: string, text: string): Promise<void> {
-//     const info = await transporter.sendMail({
-//         from: `"Team One" <abir@kientik.care>`,
-//         to,
-//         subject,
-//         text,
-//     });
-//     console.log('Message sent: %s', info.messageId);
-// }
 
 export const sendActualEmail = async (
     toEmail: string,
@@ -43,7 +20,6 @@ export const sendActualEmail = async (
         message: messageContent,
         name: name,
         title: subject
-        // Add any other dynamic fields your template expects
     };
 
     try {
