@@ -47,12 +47,21 @@ export async function createTrip(bookingInfo: BookingInfo) {
   const { data: { appointmentReasons } } = await apiAdapter.get(`/${orgResourceId}/config/appointment-reasons`);
   const { data: { levelsOfService } } = await apiAdapter.get(`/${orgResourceId}/config/level-of-service`);
 
+  // todo: add necessary reasons and levels of service in TS
+  // todo: add some patients in TS
+  // todo: look into the voice input abrupt stop
   const appointmentReason = appointmentReasons.find((reason: {
     displayText: string;
-  }) => reason.displayText.toLowerCase() === bookingInfo.itinerary.appointmentReasons.toLowerCase());
+  }) => reason.displayText.toLowerCase() === bookingInfo.itinerary.appointmentReasons.toLowerCase())
+    || appointmentReasons.find((reason: {
+      displayText: string;
+    }) => reason.displayText.toLowerCase() === 'general');
   const levelOfService = levelsOfService.find((reason: {
     displayText: string;
-  }) => reason.displayText.toLowerCase() === bookingInfo.itinerary.levelOfService.toLowerCase());
+  }) => reason.displayText.toLowerCase() === bookingInfo.itinerary.levelOfService.toLowerCase())
+    || levelsOfService.find((reason: {
+      displayText: string;
+    }) => reason.displayText.toLowerCase() === 'general');
 
   console.log({ appointmentReason, levelOfService })
 
@@ -138,10 +147,15 @@ export async function pullJob(patientInfo: PatientInfo, jobUuid: string) {
         patientInfo.email || 'adrian@kinetik.care',
         text,
         patientInfo.name || 'Valued Customer',
-        'Trip Confirmation'
+        'Trip Request Confirmation'
       );
     } else if (job.status === 'ERROR') {
-      await sendActualEmail('abir@kinetik.care', 'Trip Creation Error', patientInfo.name || 'Valued Customer', "Error");
+      await sendActualEmail(
+        'abir@kinetik.care',
+        'Trip Request Creation Error',
+        patientInfo.name || 'Valued Customer',
+        "Trip Request Creation Error"
+      );
       // throw new Error('ERROR');
     }
   }, 30000);
