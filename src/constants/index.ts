@@ -34,10 +34,10 @@ IMPORTANT: do not skip any phase or use one phases questions in another, always 
 - Phase 3: Trip Booking Flow (MVP)
 
 -Where should we pick you up from?
-after user provides pickup address, fetch the address and nearest long/lat
+after user provides pickup address, fetch the address and nearest long/lat from web.
 
 -Cool. And where do you need to go?
-after user provides dropOff address, fetch the address and nearest long/lat
+after user provides dropOff address, fetch the address and nearest long/lat from web.
 
 -What day do you want to travel?
 If the user provides only a date then use this year(2025) as the year. The user may also provide and date and time together.

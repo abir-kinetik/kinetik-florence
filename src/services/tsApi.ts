@@ -55,13 +55,13 @@ export async function createTrip(bookingInfo: BookingInfo) {
   }) => reason.displayText.toLowerCase() === bookingInfo.itinerary.appointmentReasons.toLowerCase())
     || appointmentReasons.find((reason: {
       displayText: string;
-    }) => reason.displayText.toLowerCase() === 'dialysis');
+    }) => reason.displayText.toLowerCase() === 'general');
   const levelOfService = levelsOfService.find((reason: {
     displayText: string;
   }) => reason.displayText.toLowerCase() === bookingInfo.itinerary.levelOfService.toLowerCase())
     || levelsOfService.find((reason: {
       displayText: string;
-    }) => reason.displayText.toLowerCase() === 'taxi');
+    }) => reason.displayText.toLowerCase() === 'general');
 
   console.log({ appointmentReason, levelOfService })
 

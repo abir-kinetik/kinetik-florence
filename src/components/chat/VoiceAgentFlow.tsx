@@ -319,7 +319,9 @@ const VoiceAgentFlow = () => {
         }
         return;
       case 'END_CONVERSATION':
-        handleEndConversation();
+        setTimeout(() => {
+          handleEndConversation(); // Reset everything after a short delay
+        }, 10000);
         return;
       default:
         break;
@@ -383,7 +385,6 @@ const VoiceAgentFlow = () => {
       console.log("handleUserMessage: Extracted JSON block:", { jsonBlock });
 
       if (jsonBlock) {
-
         let parsedJsonContent;
         try {
           parsedJsonContent = JSON.parse(jsonBlock);
@@ -393,16 +394,23 @@ const VoiceAgentFlow = () => {
         }
 
         if (parsedJsonContent) {
-          if (parsedJsonContent.type !== 'END_CONVERSATION') {
-            console.warn("handleUserMessage: JSON block has no type, treating as general response.");
-            setCurrentAgentMessage("Thank you. Please wait, while we process your request.");
-            speak("Thank you. Please wait, while we process your request.")
-          } else {
+          if (parsedJsonContent.type === 'END_CONVERSATION') {
             setCurrentAgentMessage("Thank you.");
             setChatHistory(prev => prev.map(msg => msg.id === agentMessageId ? {
               ...msg,
-              text: "Thank you."
+              text: "Thank you for using our service."
             } : msg));
+            speak("Thank you for using our service.");
+          }
+          else {
+            console.warn("handleUserMessage: JSON block has no type, treating as general response.");
+            setChatHistory(prev => prev.map(msg => msg.id === agentMessageId ? {
+              ...msg,
+              text: "Thank you. Please wait, while we process your request."
+            } : msg));
+            if (parsedJsonContent.type !== 'GRIEVANCE_INFO') {
+              speak("Thank you. Please wait, while we process your request.");
+            }
           }
           handleJSONAction(parsedJsonContent, agentMessageId, fullAgentResponse);
           if ([
