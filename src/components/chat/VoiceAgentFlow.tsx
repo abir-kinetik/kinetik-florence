@@ -153,7 +153,7 @@ const VoiceAgentFlow = () => {
   }, [availableVoices]);
 
 
-  const updatePatientContext = useCallback(async (patient: PatientInfo, tripInfo: any = null) => {
+  const updatePatientContext = useCallback(async (patient: PatientInfo, contextAddition: string = '') => {
     if (!geminiChatRef.current) {
       console.error("updatePatientContext: Gemini chat ref not available.");
       return;
@@ -176,10 +176,8 @@ const VoiceAgentFlow = () => {
       IMPORTANT: You are continuing an existing conversation. 
       Do NOT start over or ask for verification again. 
       CURRENT STATUS: Patient is verified and ready to proceeding next phase.`;
-      if (tripInfo) {
-        contextMessage += `
-        Here are the trip details for current conversation:
-        TRIP INFO: ${JSON.stringify(tripInfo)}`;
+      if (contextAddition) {
+        contextMessage += `\nThe agent should use this message: ${contextAddition}`;
       }
 
       const stream = await geminiChatRef.current.sendMessageStream({ message: contextMessage });
@@ -277,10 +275,10 @@ const VoiceAgentFlow = () => {
               throw new Error(`Failed to create trip: ${createTripError}`);
             }
             const confirmationMessage = `Great! We will send an email regarding your trip shortly.`;
-            setChatHistory(prev => prev.map(msg => msg.id === agentMessageId ? { ...msg, text: confirmationMessage } : msg));
-            speak(confirmationMessage);
+            // setChatHistory(prev => prev.map(msg => msg.id === agentMessageId ? { ...msg, text: confirmationMessage } : msg));
+            // speak(confirmationMessage);
             if (patientInfo) {
-              updatePatientContext(patientInfo);
+              updatePatientContext(patientInfo, confirmationMessage);
             }
             return; // Booking processed
           } else {
@@ -301,9 +299,9 @@ const VoiceAgentFlow = () => {
         const tripData = jsonContent as TripManagementInfo;
         const trip: Trip | null = await getTripData(tripData);
         if (trip && patientInfo) {
-          updatePatientContext(patientInfo, trip);
+          updatePatientContext(patientInfo, 'Trip has been found.');
         }
-        break;
+        return;
       case 'TRIP_CANCELLATION':
         const cancellationReason = jsonContent.displayText || "No reason provided";
         console.log("handleUserMessage: Trip cancellation requested with reason:", cancellationReason);
@@ -316,7 +314,9 @@ const VoiceAgentFlow = () => {
           patientInfo?.name || 'Patient',
           "Grievance Report"
         );
-        console.log("handleUserMessage: Grievance info captured:", grievanceInfo);
+        if (patientInfo) {
+          updatePatientContext(patientInfo, 'Grievance has been reported.');
+        }
         return;
       case 'END_CONVERSATION':
         handleEndConversation();
@@ -739,7 +739,7 @@ const VoiceAgentFlow = () => {
   return (
     <div
       className="w-full max-w-2xl mx-auto bg-slate-800/80 backdrop-blur-md shadow-2xl rounded-xl p-4 sm:p-6 border border-slate-700/50 flex flex-col"
-      style={{ height: 'calc(100vh - 200px)', minHeight: '500px' }}>
+      style={{ height: 'calc(100vh - 400px)', minHeight: '500px' }}>
       {bookingInfo && agentStatus === AgentStatus.ENDED ? (
         <BookingDetailsCard bookingInfo={bookingInfo} onStartNew={handleStartConversation} />
       ) : (

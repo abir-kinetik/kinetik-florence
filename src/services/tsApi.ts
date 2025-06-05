@@ -135,7 +135,7 @@ export async function pullJob(patientInfo: PatientInfo, jobUuid: string) {
         Level of Service: ${info.levelOfService}
         `;
       await sendActualEmail(
-        'abir@kinetik.care',
+        patientInfo.email || 'adrian@kinetik.care',
         text,
         patientInfo.name || 'Valued Customer',
         'Trip Confirmation'
