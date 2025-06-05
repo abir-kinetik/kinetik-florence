@@ -710,7 +710,7 @@ const VoiceAgentFlow = () => {
       case AgentStatus.PROCESSING:
         return "Thinking...";
       case AgentStatus.SPEAKING:
-        return "Eva is speaking...";
+        return "Florence is speaking...";
       case AgentStatus.ENDED:
         return "Conversation ended!";
       case AgentStatus.ERROR:

@@ -10,7 +10,7 @@ const ChatBubble = ({ message }: ChatBubbleProps) => {
     ? 'bg-sky-500 text-white self-end rounded-l-xl rounded-tr-xl'
     : 'bg-slate-700 text-slate-200 self-start rounded-r-xl rounded-tl-xl';
   
-  const avatarText = isUser ? 'You' : 'Eva';
+  const avatarText = isUser ? 'You' : 'Florence';
   const avatarColor = isUser ? 'bg-sky-600' : 'bg-teal-600';
 
   return (
